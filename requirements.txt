@@ -17,4 +17,16 @@ flake8==6.1.0
 isort==5.12.0
 
 # Documentation
-sphinx==7.2.6 
+sphinx==7.2.6
+
+# Additional dependencies from main.py
+torch==2.1.0
+TTS==0.22.0
+sounddevice==0.4.6
+numpy==1.26.4
+pyaudio==0.2.13
+soundfile==0.12.1
+transformers==4.37.0
+matplotlib==3.8.2
+datasets==2.17.0
+pydub==0.25.1
