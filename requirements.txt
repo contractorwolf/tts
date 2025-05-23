@@ -23,7 +23,7 @@ sphinx==7.2.6
 torch==2.1.0
 TTS==0.22.0
 sounddevice==0.4.6
-numpy==1.26.4
+numpy==1.22.0
 pyaudio==0.2.13
 soundfile==0.12.1
 transformers==4.37.0

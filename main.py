@@ -1,9 +1,12 @@
+# sduo apt install -y portaudio19-dev
+
+
 import torch
 from TTS.api import TTS
 import sounddevice as sd
 import numpy as np
 
-import asyncio
+import asyncio 
 import pyaudio
 import soundfile as sf
 
