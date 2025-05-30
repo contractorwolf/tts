@@ -26,14 +26,28 @@ import sounddevice as sd
 # determine if GPU is available
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DEFAULT_TEXT = "the journey of a thousand miles begins with a single step"
+# Minimum number of characters required for some models. When the input
+# is shorter than this length ``tts`` may throw a runtime error due to the
+# convolution layers expecting a larger sequence. Short inputs are padded
+# with spaces to avoid the issue.
+MIN_INPUT_LEN = 8
 
 print("Loading TTS model...")
 # load the speedy-speech model once
 tts = TTS(model_name="tts_models/en/ljspeech/speedy-speech").to(DEVICE)
 
 
+def _prepare_text(text: str) -> str:
+    """Pad short text inputs so the model receives enough characters."""
+    text = text.strip()
+    if len(text) < MIN_INPUT_LEN:
+        text = text + " " * (MIN_INPUT_LEN - len(text))
+    return text
+
+
 def speak(text: str) -> None:
     """Convert text to speech and play it."""
+    text = _prepare_text(text)
     print(f"Speaking: {text}")
     wav = tts.tts(text=text)
     sd.play(wav, samplerate=22050)
