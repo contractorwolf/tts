@@ -4,8 +4,8 @@ from TTS.api import TTS
 import sounddevice as sd
 
 # Available speech models (from main.py)
-# 10: tts_models/en/ek1/tacotron2
-# 11: tts_models/en/ljspeech/tacotron2-DDC
+# 10: tts_models/en/ek1/tacotron2                           doesnt work
+# 11: tts_models/en/ljspeech/tacotron2-DDC                   doesnt work
 # 12: tts_models/en/ljspeech/tacotron2-DDC_ph
 # 13: tts_models/en/ljspeech/glow-tts
 # 14: tts_models/en/ljspeech/speedy-speech
@@ -22,6 +22,7 @@ import sounddevice as sd
 # 25: tts_models/en/blizzard2013/capacitron-t2-c150_v2
 # 26: tts_models/en/multi-dataset/tortoise-v2
 # 27: tts_models/en/jenny/jenny
+speech_model = "tts_models/en/ljspeech/speedy-speech" #"tts_models/en/ljspeech/speedy-speech"
 
 # determine if GPU is available
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -32,9 +33,11 @@ DEFAULT_TEXT = "the journey of a thousand miles begins with a single step"
 # with spaces to avoid the issue.
 MIN_INPUT_LEN = 8
 
+
+
 print("Loading TTS model...")
 # load the speedy-speech model once
-tts = TTS(model_name="tts_models/en/ljspeech/speedy-speech").to(DEVICE)
+tts = TTS(model_name=speech_model).to(DEVICE)
 
 
 def _prepare_text(text: str) -> str:
