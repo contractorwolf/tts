@@ -1,6 +1,6 @@
 # Core dependencies
 flask==2.3.3
-requests==2.31.0
+requests==2.32.3
 python-dotenv==1.0.0
 
 # Database
@@ -22,16 +22,16 @@ sphinx==7.2.6
 # Additional dependencies from main.py
 torch==2.7.0
 torchaudio==2.7.0
-TTS==0.22.0
-sounddevice==0.4.6
+coqui-tts==0.26.2
+sounddevice==0.5.2
 numpy==1.22.0
 #pyaudio==0.2.13
-soundfile==0.12.1
-transformers==4.37.0
-matplotlib==3.8.2
-datasets==2.17.0
+soundfile==0.13.1
+transformers==4.51.3
+matplotlib==3.8.4
+datasets==3.6.0
 pydub==0.25.1
-sentencepiece==0.1.98
+sentencepiece==0.2.0
 pyaudio==0.2.14
 
 
