@@ -1,3 +1,14 @@
+ALSA lib pcm.c:8568:(snd_pcm_recover) underrun occurred
+ALSA lib pcm.c:8568:(snd_pcm_recover) underrun occurred
+ALSA lib pcm.c:8568:(snd_pcm_recover) underrun occurred
+ALSA lib pcm.c:8568:(snd_pcm_recover) underrun occurred
+
+
+
+
+
+
+
 tegrastats
 
 05-30-2025 21:53:58 RAM 4528/7620MB (lfb 36x4MB) SWAP 1838/3810MB (cached 2MB) CPU [1%@1728,2%@729,7%@729,5%@729,0%@729,0%@729] EMC_FREQ 11%@665 GR3D_FREQ 0%@[305] NVDEC off NVJPG off NVJPG1 off VIC off OFA off APE 200 cpu@46.093C soc2@45.437C soc0@46.218C gpu@47.281C tj@47.281C soc1@45.437C VDD_IN 4447mW/5015mW VDD_CPU_GPU_CV 760mW/1022mW VDD_SOC 1322mW/1484mW

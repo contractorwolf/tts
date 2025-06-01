@@ -49,18 +49,14 @@ output_path = "outputs/audio.wav"
 # text = "the shieks sixth sheep is sick"
 # text = "round and round the rugged rock, the ragged rascal ran"
 # text = "Ok, so you do want a loan, but you don't think you can get approved with your credit score. Do I have that right?"
-text = "The journey of a thousand miles begins with a single step"
+text = "ok i am listening to you, please speak clearly and i will transcribe your speech to text. Then i will speak your words back to you. Whenever you are ready, please start speaking. I will listen to you and transcribe your speech to text. Then i will speak it back to you. Whenever you are ready, please start speaking. I will listen to you and transcribe your speech to text. Then i will speak it back to you. Whenever you are ready..."
 
 wav = tts.tts(text=text)
 # Play the audio (sample rate is typically 22050 Hz for most TTS models)
 sd.play(wav, samplerate=22050)
 sd.wait()  # Wait until the audio is finished playing
 
-
 # tts.tts_to_file(text=text, file_path=output_path)
-    
-
-
 
 processor2 = SpeechT5Processor.from_pretrained("microsoft/speecht5_tts")
 
