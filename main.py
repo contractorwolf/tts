@@ -5,22 +5,21 @@ import torch
 from TTS.api import TTS
 import sounddevice as sd
 import numpy as np
-
 import asyncio 
 import pyaudio
 import soundfile as sf
+import matplotlib.pyplot as plt
+
 
 from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC
 
 
-import matplotlib.pyplot as plt
 
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech
 from datasets import load_dataset
 from transformers import SpeechT5HifiGan
 from pydub import AudioSegment
 from pydub.playback import play
-
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -43,24 +42,9 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 # 26: tts_models/en/multi-dataset/tortoise-v2
 # 27: tts_models/en/jenny/jenny
 
-
 speech_model = "tts_models/en/ljspeech/speedy-speech"  # Change this to the desired model
 
-
 tts = TTS(model_name=speech_model).to(device)
-
-output_path = "outputs/audio.wav"
-# text = "the shieks sixth sheep is sick"
-# text = "round and round the rugged rock, the ragged rascal ran"
-# text = "Ok, so you do want a loan, but you don't think you can get approved with your credit score. Do I have that right?"
-text = "ok i am listening to you, please speak clearly and i will transcribe your speech to text. Then i will speak your words back to you. Whenever you are ready, please start speaking. I will listen to you and transcribe your speech to text. Then i will speak it back to you. Whenever you are ready, please start speaking. I will listen to you and transcribe your speech to text. Then i will speak it back to you. Whenever you are ready..."
-
-wav = tts.tts(text=text)
-# Play the audio (sample rate is typically 22050 Hz for most TTS models)
-sd.play(wav, samplerate=22050)
-sd.wait()  # Wait until the audio is finished playing
-
-# tts.tts_to_file(text=text, file_path=output_path)
 
 processor2 = SpeechT5Processor.from_pretrained("microsoft/speecht5_tts")
 
@@ -71,6 +55,19 @@ embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validat
 speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
 
 vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan")
+
+output_path = "outputs/audio.wav"
+# text = "the shieks sixth sheep is sick"
+# text = "round and round the rugged rock, the ragged rascal ran"
+# text = "Ok, so you do want a loan, but you don't think you can get approved with your credit score. Do I have that right?"
+text = "ok i am listening, please speak clearly and i will transcribe your speech into text. Then i will speak your words back to you. Whenever you are ready..."
+
+wav = tts.tts(text=text)
+# Play the audio (sample rate is typically 22050 Hz for most TTS models)
+sd.play(wav, samplerate=22050)
+sd.wait()  # Wait until the audio is finished playing
+
+# tts.tts_to_file(text=text, file_path=output_path)
 
 def record_audio():
     """
