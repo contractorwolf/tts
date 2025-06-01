@@ -42,8 +42,12 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 # 25: tts_models/en/blizzard2013/capacitron-t2-c150_v2
 # 26: tts_models/en/multi-dataset/tortoise-v2
 # 27: tts_models/en/jenny/jenny
-        
-tts = TTS(model_name="tts_models/en/ljspeech/speedy-speech").to(device)
+
+
+speech_model = "tts_models/en/ljspeech/speedy-speech"  # Change this to the desired model
+
+
+tts = TTS(model_name=speech_model).to(device)
 
 output_path = "outputs/audio.wav"
 # text = "the shieks sixth sheep is sick"
