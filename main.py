@@ -142,8 +142,8 @@ def record_audio():
 processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
 model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
 
-# Move the entire model to float64 dtype
-model = model.to(dtype=torch.float64)
+# Use float32 precision and move the STT model to the selected device
+model = model.to(device=device, dtype=torch.float32)
 
 
 def speak(text):
@@ -190,7 +190,7 @@ def process_audio(audio_data):
         input_values = processor(audio_input, return_tensors="pt", sampling_rate=16000).input_values
         
         # Convert input_values to the appropriate data type and device
-        input_values = input_values.to(dtype=torch.float64, device=model.device)
+        input_values = input_values.to(dtype=torch.float32, device=device)
         
         # Perform inference with the model
         with torch.no_grad():
