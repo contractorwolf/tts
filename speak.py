@@ -117,6 +117,10 @@ def get_input_with_history(prompt, history, history_index):
     cursor_pos = 0
     temp_history_index = history_index
     
+    def refresh_line():
+        """Clear current line and redraw prompt + current text"""
+        print(f'\r\033[K{prompt}{current_text}', end='', flush=True)
+    
     while True:
         char = get_char()
         
@@ -135,29 +139,25 @@ def get_input_with_history(prompt, history, history_index):
                         temp_history_index -= 1
                         current_text = history[temp_history_index]
                         cursor_pos = len(current_text)
-                        # Clear line and reprint
-                        print(f'\r{prompt}{current_text}', end='', flush=True)
+                        refresh_line()
                         
                 elif next2 == 'B':  # Down arrow
                     if history and temp_history_index < len(history) - 1:
                         temp_history_index += 1
                         current_text = history[temp_history_index]
                         cursor_pos = len(current_text)
-                        # Clear line and reprint
-                        print(f'\r{prompt}{current_text}', end='', flush=True)
+                        refresh_line()
                     elif temp_history_index == len(history) - 1:
                         temp_history_index = len(history)
                         current_text = ""
                         cursor_pos = 0
-                        # Clear line and reprint
-                        print(f'\r{prompt}', end='', flush=True)
+                        refresh_line()
         
         elif char == '\x7f':  # Backspace
             if cursor_pos > 0:
                 current_text = current_text[:cursor_pos-1] + current_text[cursor_pos:]
                 cursor_pos -= 1
-                # Clear line and reprint
-                print(f'\r{prompt}{current_text} \r{prompt}{current_text}', end='', flush=True)
+                refresh_line()
         
         elif char.isprintable():  # Regular character
             current_text = current_text[:cursor_pos] + char + current_text[cursor_pos:]
