@@ -262,3 +262,76 @@ Werkzeug                      3.1.3
 wrapt                         1.17.2
 xxhash                        3.5.0
 yarl                          1.20.0
+
+
+
+
+
+
+
+> Text splitted to sentences.
+['a man. a plan.', 'a canal.', 'panama']
+Traceback (most recent call last):
+  File "/home/james/git/tts/speak.py", line 62, in <module>
+    speak(text)
+  File "/home/james/git/tts/speak.py", line 55, in speak
+    wav = tts.tts(text=text)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/TTS/api.py", line 276, in tts
+    wav = self.synthesizer.tts(
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/TTS/utils/synthesizer.py", line 398, in tts
+    outputs = synthesis(
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/TTS/tts/utils/synthesis.py", line 221, in synthesis
+    outputs = run_model_torch(
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/TTS/tts/utils/synthesis.py", line 53, in run_model_torch
+    outputs = _func(
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/TTS/tts/models/forward_tts.py", line 689, in inference
+    o_en, x_mask, g, _ = self._forward_encoder(x, x_mask, g)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/TTS/tts/models/forward_tts.py", line 408, in _forward_encoder
+    o_en = self.encoder(torch.transpose(x_emb, 1, -1), x_mask, g)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/TTS/tts/layers/feed_forward/encoder.py", line 161, in forward
+    o = self.encoder(x, x_mask)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/TTS/tts/layers/feed_forward/encoder.py", line 71, in forward
+    o = self.res_conv_block(o, x_mask)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/TTS/tts/layers/generic/res_conv_bn.py", line 123, in forward
+    o = block(o)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/TTS/tts/layers/generic/res_conv_bn.py", line 79, in forward
+    return self.conv_bn_blocks(x)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/container.py", line 240, in forward
+    input = module(input)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/TTS/tts/layers/generic/res_conv_bn.py", line 42, in forward
+    o = self.conv1d(x)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/conv.py", line 375, in forward
+    return self._conv_forward(input, self.weight, self.bias)
+  File "/home/james/git/tts/venv/lib/python3.10/site-packages/torch/nn/modules/conv.py", line 370, in _conv_forward
+    return F.conv1d(
+RuntimeError: Calculated padded input size per channel: (8). Kernel size: (13). Kernel size can't be greater than actual input size
