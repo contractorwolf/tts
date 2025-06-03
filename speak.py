@@ -1,7 +1,18 @@
+# for: ljspeech/vits
+# needed: sudo apt-get install espeak espeak-data
+# needed: pip install espeak
+
+# needed: pip install termios
+# needed: pip install tty
+# needed: pip install select
+
 import sys
 import torch
 from TTS.api import TTS
 import sounddevice as sd
+import termios
+import tty
+import select
 
 # Available speech models (from main.py)
 # 10: tts_models/en/ek1/tacotron2                           doesnt work
@@ -66,14 +77,98 @@ def speak(text: str) -> None:
     sd.wait()
 
 
+def get_char():
+    """Get a single character from stdin without pressing enter"""
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(sys.stdin.fileno())
+        ch = sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return ch
+
+def get_input_with_history(prompt, history, history_index):
+    """Get input with arrow key history navigation"""
+    print(prompt, end='', flush=True)
+    current_text = ""
+    cursor_pos = 0
+    temp_history_index = history_index
+    
+    while True:
+        char = get_char()
+        
+        if char == '\r' or char == '\n':  # Enter key
+            print()
+            return current_text, len(history)
+        
+        elif char == '\x03':  # Ctrl+C
+            raise KeyboardInterrupt
+        
+        elif char == '\x1b':  # Escape sequence (arrow keys)
+            next1, next2 = get_char(), get_char()
+            if next1 == '[':
+                if next2 == 'A':  # Up arrow
+                    if history and temp_history_index > 0:
+                        temp_history_index -= 1
+                        current_text = history[temp_history_index]
+                        cursor_pos = len(current_text)
+                        # Clear line and reprint
+                        print(f'\r{prompt}{current_text}', end='', flush=True)
+                        
+                elif next2 == 'B':  # Down arrow
+                    if history and temp_history_index < len(history) - 1:
+                        temp_history_index += 1
+                        current_text = history[temp_history_index]
+                        cursor_pos = len(current_text)
+                        # Clear line and reprint
+                        print(f'\r{prompt}{current_text}', end='', flush=True)
+                    elif temp_history_index == len(history) - 1:
+                        temp_history_index = len(history)
+                        current_text = ""
+                        cursor_pos = 0
+                        # Clear line and reprint
+                        print(f'\r{prompt}', end='', flush=True)
+        
+        elif char == '\x7f':  # Backspace
+            if cursor_pos > 0:
+                current_text = current_text[:cursor_pos-1] + current_text[cursor_pos:]
+                cursor_pos -= 1
+                # Clear line and reprint
+                print(f'\r{prompt}{current_text} \r{prompt}{current_text}', end='', flush=True)
+        
+        elif char.isprintable():  # Regular character
+            current_text = current_text[:cursor_pos] + char + current_text[cursor_pos:]
+            cursor_pos += 1
+            print(char, end='', flush=True)
+
 if __name__ == "__main__":
     text = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_TEXT
     speak(text)
+    
+    # Initialize history
+    history = []
+    history_index = 0
+    
+    # Add initial text to history if provided
+    if len(sys.argv) > 1:
+        history.append(text)
+        history_index = len(history)
+    
     print("Type text and press enter (Ctrl+C to exit).")
+    print("Use ↑/↓ arrow keys to navigate through previous utterances.")
+    
     try:
         while True:
-            user_text = input("> ")
+            user_text, history_index = get_input_with_history("> ", history, history_index)
             if user_text.strip():
                 speak(user_text)
+                # Add to history, avoiding duplicates of the last entry
+                if not history or history[-1] != user_text:
+                    history.append(user_text)
+                    # Keep only last 20 entries
+                    if len(history) > 20:
+                        history.pop(0)
+                history_index = len(history)
     except KeyboardInterrupt:
         print("\nExiting...")
