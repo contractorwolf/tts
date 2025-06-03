@@ -206,8 +206,6 @@ def process_audio(audio_data):
         with torch.no_grad():
             try:
                 logits = model(input_values).logits
-                # print(f"Input values shape: {input_values.shape}, values: {input_values}")
-                logits = model(input_values).logits
                 # print(f"Logits shape: {logits.shape}, values: {logits}")
             except Exception as e:
                 print(f"Error during model inference: {str(e)}")
