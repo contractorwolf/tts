@@ -29,7 +29,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DEFAULT_TEXT = "the journey of a thousand miles begins with a single step"
 # Minimum number of characters for each utterance.  Shorter phrases cause
 # errors in some models, so they are padded with spaces up to this length.
-MIN_INPUT_LEN = 8
+MIN_INPUT_LEN = 20
 
 
 
@@ -40,7 +40,7 @@ tts = TTS(model_name=speech_model).to(DEVICE)
 
 def _prepare_text(text: str) -> str:
     """Pad short text inputs so the model receives enough characters."""
-    text = text.strip()
+    # text = text.strip()
     if len(text) < MIN_INPUT_LEN:
         text = text + " " * (MIN_INPUT_LEN - len(text))
     return text
