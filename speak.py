@@ -22,7 +22,9 @@ import sounddevice as sd
 # 25: tts_models/en/blizzard2013/capacitron-t2-c150_v2
 # 26: tts_models/en/multi-dataset/tortoise-v2
 # 27: tts_models/en/jenny/jenny
-speech_model = "tts_models/en/ljspeech/speedy-speech" #"tts_models/en/ljspeech/speedy-speech"
+
+#speech_model = "tts_models/en/ljspeech/speedy-speech" #"tts_models/en/ljspeech/speedy-speech"
+speech_model = "tts_models/en/ljspeech/vits"  # Changed from speedy-speech to vits
 
 # determine if GPU is available
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
