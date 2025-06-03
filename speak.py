@@ -62,7 +62,7 @@ def speak(text: str) -> None:
     text = _prepare_text(text)
     print(f"Speaking: {text}")
     wav = tts.tts(text=text)
-    sd.play(wav, samplerate=22050)
+    sd.play(wav, samplerate=tts.synthesizer.output_sample_rate)
     sd.wait()
 
 
