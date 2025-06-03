@@ -23,6 +23,15 @@ from pydub.playback import play
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
+# Pad short sentences so the TTS model receives enough characters.
+MIN_INPUT_LEN = 8
+
+def _prepare_text(text: str) -> str:
+    text = text.strip()
+    if len(text) < MIN_INPUT_LEN:
+        text = text + " " * (MIN_INPUT_LEN - len(text))
+    return text
+
 # 10: tts_models/en/ek1/tacotron2
 # 11: tts_models/en/ljspeech/tacotron2-DDC
 # 12: tts_models/en/ljspeech/tacotron2-DDC_ph
@@ -62,7 +71,7 @@ output_path = "outputs/audio.wav"
 # text = "Ok, so you do want a loan, but you don't think you can get approved with your credit score. Do I have that right?"
 text = "ok i am listening, please speak clearly and i will transcribe your speech into text. Then i will speak your words back to you. Whenever you are ready..."
 
-wav = tts.tts(text=text)
+wav = tts.tts(text=_prepare_text(text))
 # Play the audio (sample rate is typically 22050 Hz for most TTS models)
 sd.play(wav, samplerate=22050)
 sd.wait()  # Wait until the audio is finished playing
@@ -147,9 +156,10 @@ model = model.to(device=device, dtype=torch.float32)
 
 
 def speak(text):
-    print("Converting text to speech...")   
-    print("----------------------------------------------------")        
-    
+    print("Converting text to speech...")
+    print("----------------------------------------------------")
+
+    text = _prepare_text(text)
     inputs = processor2(text=text, return_tensors="pt")
     speech = model2.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=vocoder)
 
