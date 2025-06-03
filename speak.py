@@ -27,10 +27,8 @@ speech_model = "tts_models/en/ljspeech/speedy-speech" #"tts_models/en/ljspeech/s
 # determine if GPU is available
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DEFAULT_TEXT = "the journey of a thousand miles begins with a single step"
-# Minimum number of characters required for some models. When the input
-# is shorter than this length ``tts`` may throw a runtime error due to the
-# convolution layers expecting a larger sequence. Short inputs are padded
-# with spaces to avoid the issue.
+# Minimum number of characters for each utterance.  Shorter phrases cause
+# errors in some models, so they are padded with spaces up to this length.
 MIN_INPUT_LEN = 8
 
 
