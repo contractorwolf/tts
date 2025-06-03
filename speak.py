@@ -12,7 +12,7 @@ from TTS.api import TTS
 import sounddevice as sd
 import termios
 import tty
-import select
+# import select
 
 # Available speech models (from main.py)
 # 10: tts_models/en/ek1/tacotron2                           doesnt work
@@ -46,6 +46,11 @@ MIN_INPUT_LEN = 20
 
 
 
+
+# Add this near the top with other globals
+AUDIO_CACHE = {}  # Cache for storing generated audio
+MAX_CACHE_SIZE = 100  # Limit cache size to prevent memory issues
+
 print("Loading TTS model...")
 # load the speedy-speech model once
 tts = TTS(model_name=speech_model).to(DEVICE)
@@ -72,7 +77,24 @@ def speak(text: str) -> None:
     """Convert text to speech and play it."""
     text = _prepare_text(text)
     print(f"Speaking: {text}")
-    wav = tts.tts(text=text)
+    
+    # Check if audio is already cached
+    if text in AUDIO_CACHE:
+        print("(using cached audio)")
+        wav = AUDIO_CACHE[text]
+    else:
+        # Generate new audio and cache it
+        wav = tts.tts(text=text)
+        
+        # Manage cache size
+        if len(AUDIO_CACHE) >= MAX_CACHE_SIZE:
+            # Remove oldest entry (simple FIFO)
+            oldest_key = next(iter(AUDIO_CACHE))
+            del AUDIO_CACHE[oldest_key]
+        
+        AUDIO_CACHE[text] = wav
+        print(f"(cached - total cached: {len(AUDIO_CACHE)})")
+    
     sd.play(wav, samplerate=22050)
     sd.wait()
 
