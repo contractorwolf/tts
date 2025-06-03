@@ -41,11 +41,20 @@ tts = TTS(model_name=speech_model).to(DEVICE)
 
 
 def _prepare_text(text: str) -> str:
-    """Pad short text inputs so the model receives enough characters."""
-    # text = text.strip()
+    """Pad short text inputs with natural pauses so the model receives enough characters."""
+    text = text.strip()
     if len(text) < MIN_INPUT_LEN:
-        text = text + " " * (MIN_INPUT_LEN - len(text))
-    return text
+        # Option 1: Add ellipses (creates natural pauses)
+        padding_needed = MIN_INPUT_LEN - len(text)
+        text = text + "..." * (padding_needed // 3 + 1)
+        
+        # Option 2: Add commas with spaces (alternative)
+        # text = text + ", " * (padding_needed // 2 + 1)
+        
+        # Option 3: SSML break tags (if model supports SSML)
+        # text = text + '<break time="0.5s"/>' * (padding_needed // 20 + 1)
+        
+    return text[:MIN_INPUT_LEN]  # Trim to exact length if we over-padded
 
 
 def speak(text: str) -> None:
