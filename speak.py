@@ -26,6 +26,7 @@ from TTS.api import TTS  # Text-to-speech library
 import sounddevice as sd  # Audio playback library
 import termios  # Terminal I/O control
 import tty  # Terminal control functions
+import re  # Add this import at the top with other imports
 # import select
 
 # Available speech models (from main.py)
@@ -53,13 +54,10 @@ speech_model = "tts_models/en/ljspeech/vits"  # Changed from speedy-speech to vi
 
 # determine if GPU is available
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"  # Use GPU if available, otherwise CPU
-DEFAULT_TEXT = "the journey of a thousand miles begins with a single step"  # Default text to speak
+DEFAULT_TEXT = "i am ready to speak what you type on the command line. click the arrow up or down to go to the previous statements."  # Default text to speak
 # Minimum number of characters for each utterance.  Shorter phrases cause
 # errors in some models, so they are padded with spaces up to this length.
 MIN_INPUT_LEN = 20  # Minimum text length to avoid model errors
-
-
-
 
 # Add this near the top with other globals
 AUDIO_CACHE = {}  # Cache for storing generated audio to avoid regenerating same text
@@ -69,48 +67,76 @@ print("Loading TTS model...")
 # load the speedy-speech model once
 tts = TTS(model_name=speech_model).to(DEVICE)  # Initialize TTS model and move to GPU/CPU
 
+def speak_streaming(text: str) -> None:
+    """Convert text to speech sentence by sentence for faster initial playback."""
+    text = text.strip()  # Remove extra whitespace
+    if not text:  # Skip if empty
+        print("DEBUG: Text is empty, returning")  # Debug print
+        return
+    
+    # Split text into sentences using regex
+    sentences = re.split(r'[.!?]+', text)  # Split on sentence endings
+    sentences = [s.strip() for s in sentences if s.strip()]  # Remove empty sentences
 
-def _prepare_text(text: str) -> str:
-    """Pad short text inputs with natural pauses so the model receives enough characters."""
-    text = text.strip()  # Remove leading/trailing whitespace
-    if len(text) < MIN_INPUT_LEN:  # If text is too short
-        # Option 1: Add ellipses (creates natural pauses)
-        padding_needed = MIN_INPUT_LEN - len(text)  # Calculate how much padding needed
-        text = text + "..." * (padding_needed // 3 + 1)  # Add ellipses for natural pauses
+    for i, sentence in enumerate(sentences):  # Process each sentence separately
+        print(f"DEBUG: Processing sentence {i+1}/{len(sentences)}: '{sentence}'")  # Debug print
+        #prepared_sentence = _prepare_text(sentence)  # Ensure minimum length
+        print(f"Speaking: {sentence}")  # Show current sentence
         
-        # Option 2: Add commas with spaces (alternative)
-        # text = text + ", " * (padding_needed // 2 + 1)
+        # Check cache first
+        if sentence in AUDIO_CACHE:  # Use cached audio if available
+            print("(using cached audio)")
+            wav = AUDIO_CACHE[sentence]
+        else:
+            print("DEBUG: Generating new audio...")  # Debug print
+            wav = tts.tts(text=sentence)  # Generate audio for this sentence
+            print(f"DEBUG: Generated audio with shape: {len(wav) if hasattr(wav, '__len__') else 'unknown'}")  # Debug print
+            
+            # Manage cache size
+            if len(AUDIO_CACHE) >= MAX_CACHE_SIZE:  # Remove oldest if cache full
+                oldest_key = next(iter(AUDIO_CACHE))
+                del AUDIO_CACHE[oldest_key]
+            
+            AUDIO_CACHE[sentence] = wav  # Cache the new audio
+            print(f"(cached - total cached: {len(AUDIO_CACHE)})")
         
-        # Option 3: SSML break tags (if model supports SSML)
-        # text = text + '<break time="0.5s"/>' * (padding_needed // 20 + 1)
-        
-    return text[:MIN_INPUT_LEN]  # Trim to exact length if we over-padded
-
+        print("DEBUG: Starting playback...")  # Debug print
+        sd.play(wav, samplerate=22050)  # Play this sentence immediately
+        sd.wait()  # Wait for sentence to finish before next one
+        print("DEBUG: Playback completed")  # Debug print
 
 def speak(text: str) -> None:
-    """Convert text to speech and play it."""
-    text = _prepare_text(text)  # Ensure text meets minimum length requirements
-    print(f"Speaking: {text}")
+    """Convert text to speech - uses streaming for long texts."""
+    print(f"DEBUG: speak() called with text: '{text}' (length: {len(text)})")  # Debug print
+    text = text.strip()  # Clean input text
     
-    # Check if audio is already cached
-    if text in AUDIO_CACHE:  # If we've already generated audio for this text
-        print("(using cached audio)")
-        wav = AUDIO_CACHE[text]  # Use cached audio data
+    # Use streaming for longer texts (more than 100 characters)
+    if len(text) > 100:  # Arbitrary threshold for "long" text
+        print("DEBUG: Using streaming mode (text > 100 chars)")  # Debug print
+        speak_streaming(text)  # Use sentence-by-sentence playback
     else:
-        # Generate new audio and cache it
-        wav = tts.tts(text=text)  # Generate speech audio from text
+        # Keep original behavior for short texts
+        print(f"Speaking: {text}")
         
-        # Manage cache size
-        if len(AUDIO_CACHE) >= MAX_CACHE_SIZE:  # If cache is full
-            # Remove oldest entry (simple FIFO)
-            oldest_key = next(iter(AUDIO_CACHE))  # Get first (oldest) cache entry
-            del AUDIO_CACHE[oldest_key]  # Remove it
+        if text in AUDIO_CACHE:  # Check cache
+            print("(using cached audio)")
+            wav = AUDIO_CACHE[text]
+        else:
+            print("DEBUG: Generating new audio...")  # Debug print
+            wav = tts.tts(text=text)  # Generate audio
+            print(f"DEBUG: Generated audio with shape: {len(wav) if hasattr(wav, '__len__') else 'unknown'}")  # Debug print
+            
+            if len(AUDIO_CACHE) >= MAX_CACHE_SIZE:  # Manage cache
+                oldest_key = next(iter(AUDIO_CACHE))
+                del AUDIO_CACHE[oldest_key]
+            
+            AUDIO_CACHE[text] = wav  # Cache audio
+            print(f"(cached - total cached: {len(AUDIO_CACHE)})")
         
-        AUDIO_CACHE[text] = wav  # Store new audio in cache
-        print(f"(cached - total cached: {len(AUDIO_CACHE)})")
-    
-    sd.play(wav, samplerate=22050)  # Play audio at 22kHz sample rate
-    sd.wait()  # Wait for audio playback to complete
+        print("DEBUG: Starting playback...")  # Debug print
+        sd.play(wav, samplerate=22050)  # Play audio
+        sd.wait()  # Wait for completion
+        print("DEBUG: Playback completed")  # Debug print
 
 
 def get_char():
