@@ -78,28 +78,24 @@ sd.wait()  # Wait until the audio is finished playing
 
 # tts.tts_to_file(text=text, file_path=output_path)
 
-def record_audio():
-    """
-    Records audio until 2 seconds of silence are detected, then returns the recorded audio as a NumPy array.
-    
+# Audio recording configuration
+FORMAT = pyaudio.paInt16  # Audio format
+CHANNELS = 1              # Number of audio channels (mono)
+RATE = 16000              # Sampling rate in Hz
+CHUNK = 1024              # Frames per buffer
+SILENCE_LIMIT = 1.5       # Silence limit in seconds
+SILENCE_FRAME_LIMIT = int((RATE // CHUNK) * SILENCE_LIMIT)
+THRESHOLD = 25
+
+def record_audio(stream):
+    """Record audio from an open stream until silence is detected.
+
+    Args:
+        stream: An open ``pyaudio`` input stream.
+
     Returns:
-        np.array: Recorded audio data.
+        np.array or None: The recorded audio data or ``None`` if below ``THRESHOLD``.
     """
-    
-    FORMAT = pyaudio.paInt16  # Audio format
-    CHANNELS = 1              # Number of audio channels (1 for mono, 2 for stereo)
-    RATE = 16000              # Sampling rate in Hz
-    CHUNK = 1024              # Number of frames per buffer
-    SILENCE_LIMIT = 1.5         # Silence limit in seconds
-    SILENCE_FRAME_LIMIT = (RATE // CHUNK) * SILENCE_LIMIT  # Number of silence frames to stop recording
-    THRESHOLD = 25
-    
-    p = pyaudio.PyAudio()
-    stream = p.open(format=FORMAT,
-                    channels=CHANNELS,
-                    rate=RATE,
-                    input=True,
-                    frames_per_buffer=CHUNK)
     
     frames = []
     silent_frames = 0
@@ -128,9 +124,6 @@ def record_audio():
     
     #print("Finished recording.")
     
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
     
     audio_data = np.frombuffer(b''.join(frames), dtype=np.int16)
     
@@ -206,8 +199,6 @@ def process_audio(audio_data):
         with torch.no_grad():
             try:
                 logits = model(input_values).logits
-                # print(f"Input values shape: {input_values.shape}, values: {input_values}")
-                logits = model(input_values).logits
                 # print(f"Logits shape: {logits.shape}, values: {logits}")
             except Exception as e:
                 print(f"Error during model inference: {str(e)}")
@@ -228,21 +219,28 @@ def process_audio(audio_data):
 
 
 async def record_audio_async(buffer):
+    p = pyaudio.PyAudio()
+    stream = p.open(
+        format=FORMAT,
+        channels=CHANNELS,
+        rate=RATE,
+        input=True,
+        frames_per_buffer=CHUNK,
+    )
+
     try:
         while True:
-            # audio_data = record_audio()
-            # print("Recording...")
-            # buffer.append(audio_data)
-            # print("Buffer length:", len(buffer))
-            # await asyncio.sleep(0.1)  # adjust accordingly
-            
-            audio_data = record_audio()
+            audio_data = record_audio(stream)
             if audio_data is not None:
                 buffer.append(audio_data)
             await asyncio.sleep(0.1)  # adjust accordingly
-    
+
     except Exception as e:
         print(f"Error in record_audio_async: {str(e)}")
+    finally:
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
         
         
         

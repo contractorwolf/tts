@@ -138,7 +138,6 @@ def speak(text: str) -> None:
         sd.wait()  # Wait for completion
         print("DEBUG: Playback completed")  # Debug print
 
-
 def get_char():
     """Get a single character from stdin without pressing enter"""
     fd = sys.stdin.fileno()  # Get file descriptor for stdin
