@@ -7,7 +7,7 @@ import sounddevice as sd
 import numpy as np
 import asyncio 
 import pyaudio
-import soundfile as sf
+
 import matplotlib.pyplot as plt
 
 
@@ -18,19 +18,20 @@ from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech
 from datasets import load_dataset
 from transformers import SpeechT5HifiGan
-from pydub import AudioSegment
-from pydub.playback import play
+
+# import soundfile as sf
+# from pydub import AudioSegment
+# from pydub.playback import play
+
+
+import torch
+from TTS.api import TTS  # Text-to-speech library
+import sounddevice as sd  # Audio playback library
+import re  # Add this import at the top with other imports
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Pad short sentences so the TTS model receives enough characters.
-MIN_INPUT_LEN = 8
 
-# def _prepare_text(text: str) -> str:
-#     text = text.strip()
-#     if len(text) < MIN_INPUT_LEN:
-#         text = text + " " * (MIN_INPUT_LEN - len(text))
-#     return text
 
 # 10: tts_models/en/ek1/tacotron2
 # 11: tts_models/en/ljspeech/tacotron2-DDC
@@ -65,7 +66,7 @@ speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze
 
 vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan")
 
-output_path = "outputs/audio.wav"
+
 # text = "the shieks sixth sheep is sick"
 # text = "round and round the rugged rock, the ragged rascal ran"
 # text = "Ok, so you do want a loan, but you don't think you can get approved with your credit score. Do I have that right?"
@@ -76,7 +77,6 @@ wav = tts.tts(text=text)
 sd.play(wav, samplerate=22050)
 sd.wait()  # Wait until the audio is finished playing
 
-# tts.tts_to_file(text=text, file_path=output_path)
 
 # Audio recording configuration
 FORMAT = pyaudio.paInt16  # Audio format
@@ -86,6 +86,131 @@ CHUNK = 1024              # Frames per buffer
 SILENCE_LIMIT = 1.5       # Silence limit in seconds
 SILENCE_FRAME_LIMIT = int((RATE // CHUNK) * SILENCE_LIMIT)
 THRESHOLD = 30
+
+
+
+
+# for: ljspeech/vits
+# needed: sudo apt-get install espeak espeak-data
+# needed: pip install espeak
+
+# needed: pip install termios
+# needed: pip install tty
+# needed: pip install select
+
+print("Loading TTS model...")
+
+
+
+
+
+#speech_model = "tts_models/en/ljspeech/speedy-speech" #"tts_models/en/ljspeech/speedy-speech"
+speech_model = "tts_models/en/ljspeech/vits"  # Changed from speedy-speech to vits
+
+# determine if GPU is available
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"  # Use GPU if available, otherwise CPU
+DEFAULT_TEXT = "i am ready to speak what you type on the command line. click the arrow up or down to go to the previous statements."  # Default text to speak
+
+
+# Add this near the top with other globals
+AUDIO_CACHE = {}  # Cache for storing generated audio to avoid regenerating same text
+MAX_CACHE_SIZE = 50  # Limit cache size to prevent memory issues
+
+LISTENING = True  # Global flag to control listening state
+
+print("Loading TTS model...")
+# load the speedy-speech model once
+tts = TTS(model_name=speech_model).to(DEVICE)  # Initialize TTS model and move to GPU/CPU
+
+# Load pre-trained model and processor from Hugging Face Model Hub
+processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
+model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
+
+# Use float32 precision and move the STT model to the selected device
+model = model.to(device=device, dtype=torch.float32)
+
+
+def speak_streaming(text: str) -> None:
+    """Convert text to speech sentence by sentence for faster initial playback."""
+    global LISTENING  # Use global flag to control listening state
+    text = text.strip()  # Remove extra whitespace
+    if not text:  # Skip if empty
+        print("DEBUG: Text is empty, returning")  # Debug print
+        return
+    
+    # Split text into sentences using regex
+    sentences = re.split(r'[.!?]+', text)  # Split on sentence endings
+    sentences = [s.strip() for s in sentences if s.strip()]  # Remove empty sentences
+
+    for i, sentence in enumerate(sentences):  # Process each sentence separately
+        print(f"DEBUG: Processing sentence {i+1}/{len(sentences)}: '{sentence}'")  # Debug print
+        #prepared_sentence = _prepare_text(sentence)  # Ensure minimum length
+        print(f"Speaking: {sentence}")  # Show current sentence
+        
+        # Check cache first
+        if sentence in AUDIO_CACHE:  # Use cached audio if available
+            print("(using cached audio)")
+            wav = AUDIO_CACHE[sentence]
+        else:
+            print("DEBUG: Generating new audio...")  # Debug print
+            wav = tts.tts(text=sentence)  # Generate audio for this sentence
+            print(f"DEBUG: Generated audio with shape: {len(wav) if hasattr(wav, '__len__') else 'unknown'}")  # Debug print
+            
+            # Manage cache size
+            if len(AUDIO_CACHE) >= MAX_CACHE_SIZE:  # Remove oldest if cache full
+                oldest_key = next(iter(AUDIO_CACHE))
+                del AUDIO_CACHE[oldest_key]
+            
+            AUDIO_CACHE[sentence] = wav  # Cache the new audio
+            print(f"(cached - total cached: {len(AUDIO_CACHE)})")
+        
+        print("DEBUG: Starting playback...")  # Debug print
+        LISTENING = False  # Set listening state to False before playback
+        sd.play(wav, samplerate=22050)  # Play this sentence immediately
+        sd.wait()  # Wait for sentence to finish before next one
+        LISTENING = True  # Set listening state back to True after playback
+        print("DEBUG: Playback completed")  # Debug print
+
+def speak(text: str) -> None:
+    """Convert text to speech - uses streaming for long texts."""
+    global LISTENING  # Use global flag to control listening state
+
+
+    print(f"DEBUG: speak() called with text: '{text}' (length: {len(text)})")  # Debug print
+    text = text.strip()  # Clean input text
+    
+    # Use streaming for longer texts (more than 100 characters)
+    if len(text) > 100:  # Arbitrary threshold for "long" text
+        print("DEBUG: Using streaming mode (text > 100 chars)")  # Debug print
+        speak_streaming(text)  # Use sentence-by-sentence playback
+    else:
+        # Keep original behavior for short texts
+        print(f"Speaking: {text}")
+        
+        if text in AUDIO_CACHE:  # Check cache
+            print("(using cached audio)")
+            wav = AUDIO_CACHE[text]
+        else:
+            print("DEBUG: Generating new audio...")  # Debug print
+            wav = tts.tts(text=text)  # Generate audio
+            print(f"DEBUG: Generated audio with shape: {len(wav) if hasattr(wav, '__len__') else 'unknown'}")  # Debug print
+            
+            if len(AUDIO_CACHE) >= MAX_CACHE_SIZE:  # Manage cache
+                oldest_key = next(iter(AUDIO_CACHE))
+                del AUDIO_CACHE[oldest_key]
+            
+            AUDIO_CACHE[text] = wav  # Cache audio
+            print(f"(cached - total cached: {len(AUDIO_CACHE)})")
+        
+        print("DEBUG: Starting playback...")  # Debug print
+        LISTENING = False  # Set listening state to False before playback
+        sd.play(wav, samplerate=22050)  # Play this sentence immediately
+        sd.wait()  # Wait for sentence to finish before next one
+        LISTENING = True  # Set listening state back to True after playback
+        print("DEBUG: Playback completed")  # Debug print
+
+
+
 
 def record_audio(stream):
     """Record audio from an open stream until silence is detected.
@@ -104,6 +229,11 @@ def record_audio(stream):
     
     while True:
         # Record audio
+
+        if not LISTENING:  # Check if we are currently listening
+            print("Not listening, skipping recording...")
+            continue
+        # print("Listening...")
         data = stream.read(CHUNK)
         current_frame = np.frombuffer(data, dtype=np.int16)
         frames.append(data)
@@ -142,34 +272,9 @@ def record_audio(stream):
 
 
 
-# Load pre-trained model and processor from Hugging Face Model Hub
-processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
-model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
-
-# Use float32 precision and move the STT model to the selected device
-model = model.to(device=device, dtype=torch.float32)
 
 
-def speak(text):
-    print("Converting text to speech...")
-    print("----------------------------------------------------")
 
-    #text = _prepare_text(text)
-    inputs = processor2(text=text, return_tensors="pt")
-    speech = model2.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=vocoder)
-
-    # Convert the NumPy array to audio
-    audio = AudioSegment(
-        speech.numpy().tobytes(),
-        frame_rate=16000,
-        sample_width=speech.numpy().dtype.itemsize,
-        channels=1
-    )
-    
-    print("Speaking...")   
-
-    # Play the audio
-    play(audio)
 
 
 

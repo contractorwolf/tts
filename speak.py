@@ -19,6 +19,7 @@
 # - [ ] Add text preprocessing (abbreviation expansion, number normalization)
 # - [ ] Implement audio effects (speed control, pitch adjustment)
 # - [ ] Add export functionality to save generated audio as files
+print("Loading TTS model...")
 
 import sys
 import torch
@@ -55,13 +56,11 @@ speech_model = "tts_models/en/ljspeech/vits"  # Changed from speedy-speech to vi
 # determine if GPU is available
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"  # Use GPU if available, otherwise CPU
 DEFAULT_TEXT = "i am ready to speak what you type on the command line. click the arrow up or down to go to the previous statements."  # Default text to speak
-# Minimum number of characters for each utterance.  Shorter phrases cause
-# errors in some models, so they are padded with spaces up to this length.
-MIN_INPUT_LEN = 20  # Minimum text length to avoid model errors
+
 
 # Add this near the top with other globals
 AUDIO_CACHE = {}  # Cache for storing generated audio to avoid regenerating same text
-MAX_CACHE_SIZE = 100  # Limit cache size to prevent memory issues
+MAX_CACHE_SIZE = 50  # Limit cache size to prevent memory issues
 
 print("Loading TTS model...")
 # load the speedy-speech model once
