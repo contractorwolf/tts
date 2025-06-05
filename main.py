@@ -51,19 +51,23 @@ def _prepare_text(text: str) -> str:
 # 26: tts_models/en/multi-dataset/tortoise-v2
 # 27: tts_models/en/jenny/jenny
 
-speech_model = "tts_models/en/ljspeech/speedy-speech"  # Change this to the desired model
+#speech_model = "tts_models/en/ljspeech/speedy-speech" #"tts_models/en/ljspeech/speedy-speech"
+speech_model = "tts_models/en/ljspeech/vits"  # Changed from speedy-speech to vits
 
 tts = TTS(model_name=speech_model).to(device)
 
-processor2 = SpeechT5Processor.from_pretrained("microsoft/speecht5_tts")
+# Move these to global scope, load once:
+processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")  # Already global ✓
+model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")  # Already global ✓
 
-model2 = SpeechT5ForTextToSpeech.from_pretrained("microsoft/speecht5_tts")
 
+# But these could be optimized:
+processor2 = SpeechT5Processor.from_pretrained("microsoft/speecht5_tts")  # Global ✓
+model2 = SpeechT5ForTextToSpeech.from_pretrained("microsoft/speecht5_tts")  # Global ✓
+vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan")  # Global ✓
 embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
+speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0).to(device)  # Global ✓
 
-speaker_embeddings = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
-
-vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan")
 
 output_path = "outputs/audio.wav"
 # text = "the shieks sixth sheep is sick"
@@ -78,6 +82,8 @@ sd.wait()  # Wait until the audio is finished playing
 
 # tts.tts_to_file(text=text, file_path=output_path)
 
+audio_interface = pyaudio.PyAudio()
+
 # Audio recording configuration
 FORMAT = pyaudio.paInt16  # Audio format
 CHANNELS = 1              # Number of audio channels (mono)
@@ -86,6 +92,9 @@ CHUNK = 1024              # Frames per buffer
 SILENCE_LIMIT = 1.5       # Silence limit in seconds
 SILENCE_FRAME_LIMIT = int((RATE // CHUNK) * SILENCE_LIMIT)
 THRESHOLD = 25
+
+# Add global flag:
+LISTENING = True
 
 def record_audio(stream):
     """Record audio from an open stream until silence is detected.
@@ -141,17 +150,20 @@ def record_audio(stream):
 
 
 # Load pre-trained model and processor from Hugging Face Model Hub
-processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
-model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
+# processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
+# model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
 
 # Use float32 precision and move the STT model to the selected device
 model = model.to(device=device, dtype=torch.float32)
 
 
 def speak(text):
+    global LISTENING
     print("Converting text to speech...")
     print("----------------------------------------------------")
 
+    LISTENING = False  # Set to False before starting to speak
+    
     text = _prepare_text(text)
     inputs = processor2(text=text, return_tensors="pt")
     speech = model2.generate_speech(inputs["input_ids"], speaker_embeddings, vocoder=vocoder)
@@ -166,10 +178,12 @@ def speak(text):
     
     print("Speaking...")   
 
-    # Play the audio
+    # Play the audio (this blocks until complete)
     play(audio)
-
-
+    
+    # Audio is now finished
+    LISTENING = True
+    print("Finished speaking - resuming listening")
 
 
 def process_audio(audio_data):
@@ -218,9 +232,14 @@ def process_audio(audio_data):
 
 
 
+
+
 async def record_audio_async(buffer):
-    p = pyaudio.PyAudio()
-    stream = p.open(
+    global audio_interface
+    if audio_interface is None:
+        audio_interface = pyaudio.PyAudio()
+        
+    stream = audio_interface.open(
         format=FORMAT,
         channels=CHANNELS,
         rate=RATE,
@@ -230,6 +249,7 @@ async def record_audio_async(buffer):
 
     try:
         while True:
+
             audio_data = record_audio(stream)
             if audio_data is not None:
                 buffer.append(audio_data)
@@ -240,17 +260,18 @@ async def record_audio_async(buffer):
     finally:
         stream.stop_stream()
         stream.close()
-        p.terminate()
         
         
         
         
 
 async def process_audio_async(buffer):
+    global LISTENING
     try:
         while True:
             # print("Checking buffer...")
             if buffer:
+                LISTENING = False  # Stop listening while processing/speaking
                 print("----------------------------------------------------")
                 print("Processing audio...")
                 audio_data = buffer.pop(0)
@@ -271,22 +292,26 @@ async def process_audio_async(buffer):
                 print("Listening...")   
                 print("----------------------------------------------------")
                 
-                print("begin post process")
-                # Visualize the audio waveform
-                plt.plot(audio_data)
-                plt.title('Audio Waveform')
-                plt.xlabel('TEXT: ' + transcription[0:70].lower() + '...')
-                plt.ylabel('Amplitude')
-                # plt.show()
-                # Save the plot as a PNG file
-                plt.savefig("waveform.png")
-                plt.close()  # Close the figure window             
+                LISTENING = True  # Resume listening after processing
+
+                # Uncomment the following lines if you want to visualize or save the audio data
+                # ---------------------------------------------------------------------------------------
+                # print("begin post process")
+                # # Visualize the audio waveform
+                # plt.plot(audio_data)
+                # plt.title('Audio Waveform')
+                # plt.xlabel('TEXT: ' + transcription[0:70].lower() + '...')
+                # plt.ylabel('Amplitude')
+                # # plt.show()
+                # # Save the plot as a PNG file
+                # plt.savefig("waveform.png")
+                # plt.close()  # Close the figure window             
                 
                 # # Save a short snippet of audio for debugging
                 # sf.write('debug_audio.wav', audio_data, 16000)       
-                # print("end post process")
-            # else:
-                # print("Waiting for audio data...")
+                # print("end pot process")
+                # ---------------------------------------------------------------------------------------
+
             await asyncio.sleep(0.1)  # adjust accordingly
     except Exception as e:
         print(f"Error in process_audio_async: {str(e)}")
@@ -299,7 +324,7 @@ async def main():
     print("----------------------------------------------------")
     
     await asyncio.gather(
-        record_audio_async(buffer),
+        record_audio_async(buffer,
         process_audio_async(buffer)
     )
 
