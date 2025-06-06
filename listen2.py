@@ -1,9 +1,7 @@
 import asyncio
 import numpy as np
 import pyaudio
-import sounddevice as sd
 import torch
-from TTS.api import TTS
 from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC
 
 # Device selection
@@ -18,17 +16,10 @@ THRESHOLD = 30
 # Load models
 print("Loading models...")
 processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
-model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h").to(DEVICE, dtype=torch.float32)
-tts = TTS("tts_models/en/ljspeech/vits").to(DEVICE)
-print("Models loaded")
-
-
-def speak(text: str) -> None:
-    """Convert text to speech and play it."""
-    audio = tts.tts(text=text)
-    sd.play(audio, samplerate=22050)
-    sd.wait()
-    print("Spoken")
+model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h").to(
+    DEVICE, dtype=torch.float32
+)
+print("Model loaded")
 
 
 def record(stream: pyaudio.Stream) -> np.ndarray | None:
@@ -53,7 +44,7 @@ def transcribe(audio: np.ndarray) -> str:
     return processor.batch_decode(ids)[0]
 
 
-aSYNC_SLEEP = 0.1
+ASYNC_SLEEP = 0.1
 
 async def producer(buf: list[np.ndarray]) -> None:
     """Capture microphone audio."""
@@ -64,7 +55,7 @@ async def producer(buf: list[np.ndarray]) -> None:
             audio = record(stream)
             if audio is not None:
                 buf.append(audio)
-            await asyncio.sleep(aSYNC_SLEEP)
+            await asyncio.sleep(ASYNC_SLEEP)
     finally:
         stream.stop_stream()
         stream.close()
@@ -72,18 +63,16 @@ async def producer(buf: list[np.ndarray]) -> None:
 
 
 async def consumer(buf: list[np.ndarray]) -> None:
-    """Process and echo recorded audio."""
+    """Transcribe recorded audio."""
     while True:
         if buf:
             audio = buf.pop(0)
             text = await asyncio.get_event_loop().run_in_executor(None, transcribe, audio)
             print("Transcribed:", text.lower())
-            speak(text.lower())
-        await asyncio.sleep(aSYNC_SLEEP)
+        await asyncio.sleep(ASYNC_SLEEP)
 
 
 async def main() -> None:
-    speak("ok i am listening, please speak clearly and i will speak your words back to you. whenever you are ready...")
     print("Listening...")
     buf: list[np.ndarray] = []
     await asyncio.gather(producer(buf), consumer(buf))
